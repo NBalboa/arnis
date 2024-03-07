@@ -12,12 +12,39 @@ import Badge from "react-bootstrap/Badge";
 import setMaxNumber from "./utils/setMaxNumber";
 import setMaxFloat from "./utils/setMaxFloat";
 import calculateTotalScore from "./utils/calculateTotalScore";
+import removeHighestAndLowest from "./utils/removeHighestAndLowest";
 
 function App() {
     const [show, setShow] = useState(false);
     const handleClose = () => setShow(false);
     const handleShow = () => setShow(true);
-    const [participants, setParticipants] = useState([]);
+    const [participants, setParticipants] = useState([
+        {
+            id: 1,
+            contestant: "Pagadian",
+            time_finish: "01:01",
+
+            scores: {
+                j1: 7,
+                j2: 10,
+                j3: 1,
+                j4: 6,
+                j5: 1,
+            },
+        },
+        {
+            id: 2,
+            contestant: "Test",
+            time_finish: "01:01",
+            scores: {
+                j1: 2,
+                j2: 6,
+                j3: 7,
+                j4: 6,
+                j5: 4,
+            },
+        },
+    ]);
     const [contestant, setContestant] = useState("");
     const [minute, setMinute] = useState("");
     const [second, setSecond] = useState("");
@@ -41,7 +68,6 @@ function App() {
         const j3_check = setMaxFloat(parseFloat(j3), 10);
         const j4_check = setMaxFloat(parseFloat(j4), 10);
         const j5_check = setMaxFloat(parseFloat(j5), 10);
-        console.log(j5_check);
         if (
             checkDuplicateName(contestant, participants) === false &&
             participants.length > 0 &&
@@ -140,11 +166,6 @@ function App() {
         }
     }
 
-    // const violations = {
-    //     max_time: 2,
-    //     min_time: 1,
-    // };
-
     useEffect(() => {
         participants.map((item) => {
             const total_score = calculateTotalScore(item.scores);
@@ -155,17 +176,44 @@ function App() {
             (a, b) => b.total_score - a.total_score
         );
         let rank = 0;
-        let prevScore = null;
 
-        sorted.forEach((item) => {
-            if (item.total_score === prevScore) {
-                item["rank"] = rank;
+        sorted.map((item, index) => {
+            rank++;
+
+            if (index !== 0) {
+                const current = item;
+                const prev = participants[index - 1];
+
+                if (current.total_score > prev.total_score) {
+                    item["rank"] = rank;
+                } else if (current.total_score === prev.total_score) {
+                    const current_scores = removeHighestAndLowest(
+                        current.scores
+                    );
+                    const prev_scores = removeHighestAndLowest(prev.scores);
+
+                    const current_total_score =
+                        calculateTotalScore(current_scores);
+                    const prev_total_score = calculateTotalScore(prev_scores);
+
+                    if (current_total_score > prev_total_score) {
+                        item["rank"] = prev.rank;
+                        prev.rank = rank;
+                    } else if (prev_total_score > current_total_score) {
+                        item["rank"] = rank;
+                    } else {
+                        item["rank"] = prev.rank;
+                        rank--;
+                    }
+                } else {
+                    item["rank"] = rank;
+                }
             } else {
-                rank++;
                 item["rank"] = rank;
-                prevScore = item.total_score;
             }
         });
+
+        participants.sort((a, b) => a.rank - b.rank);
     }, [participants]);
 
     return (
